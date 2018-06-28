@@ -1,4 +1,4 @@
-# Gemfile
+# SplashYou/Gemfile
 source "https://rubygems.org"
 
 gem "rspec"
