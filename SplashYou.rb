@@ -138,6 +138,16 @@ def check_api_response(got)
   end
 end
 
+# Getting channel information by username - using to test authentication
+def channels_list_by_username(service, part, **params)
+  response = service.list_channels(part, params).to_json
+  item = JSON.parse(response).fetch("items")[0]
+
+  puts ("This channel's ID is #{item.fetch("id")}. " +
+        "Its title is '#{item.fetch("snippet").fetch("title")}', and it has " +
+        "#{item.fetch("statistics").fetch("viewCount")} views.")
+end
+
 # Make call to YouTube api and check duration of vidoes
 def check_video(vid)
   vid['youtube_url'] = vid['youtube_url'][0...43]
@@ -176,6 +186,7 @@ end
 # Run this to grab a hash of videos and associated data
 @vids = grab_videos(10, @counter) # max request is 50 even though the doc says 1000
 something_went_wrong if @vids['error'] == true
+channels_list_by_username(service, 'snippet,contentDetails,statistics', for_username: 'GoogleDevelopers')
 # Now we want to sort by reach in descending order
 vid_array = @vids.sort_by {|k,v| v['reach']}.reverse
 puts vid_array
