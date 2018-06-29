@@ -17,8 +17,8 @@ describe 'Build html table from api data' do
   describe "grab_videos" do
     it 'hits api and fills hash' do
       @vids = grab_videos(10)
-      title = @vids['ZxnNDNQJYEg']['title']
-      expect(title).to eq 'The Reality'
+      title = @vids['xI9gYuL5NR4']['title']
+      expect(title).to eq 'The Church Divide'
     end
   end
 end
