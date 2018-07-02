@@ -6,6 +6,7 @@ require 'google/apis'
 require 'google/apis/youtube_v3'
 require 'googleauth'
 require 'googleauth/stores/file_token_store'
+require 'ISO8601'
 require 'JSON'
 require 'rest-client'
 require 'rubygems'
@@ -57,9 +58,9 @@ def authorize
 end
 
 # Initialize the API
-service = Google::Apis::YoutubeV3::YouTubeService.new
-service.client_options.application_name = APPLICATION_NAME
-service.authorization = authorize
+@service = Google::Apis::YoutubeV3::YouTubeService.new
+@service.client_options.application_name = APPLICATION_NAME
+@service.authorization = authorize
 
 # api call class with sane defaults
 class Planetoftheapis
@@ -121,7 +122,7 @@ class Planetoftheapis
 
 end
 
-# Check response for errors
+# Check api response for errors
 def check_api_response(got)
   error = false
   if got['response'].has_key? 'message'
@@ -139,24 +140,23 @@ def check_api_response(got)
   end
 end
 
-# Getting channel information by username - using to test authentication
-def channels_list_by_username(service, part, **params)
-  response = service.list_channels(part, params).to_json
-  item = JSON.parse(response).fetch("items")[0]
-
-  puts ("This channel's ID is #{item.fetch("id")}. " +
-        "Its title is '#{item.fetch("snippet").fetch("title")}', and it has " +
-        "#{item.fetch("statistics").fetch("viewCount")} views.")
-end
-
-# Make call to YouTube api and check duration of vidoes
+# Make call to YouTube api and check duration of vidoes and number of views
 def check_video(vid)
   vid['youtube_url'] = vid['youtube_url'][0...43]
   tube_id = vid['youtube_url'][32...43]
-  @vids[tube_id] = Hash.new
-  @vids[tube_id]['reach']       = vid['reach']
-  @vids[tube_id]['title']       = vid['title']
-  @vids[tube_id]['youtube_url'] = vid['youtube_url']
+  tube_info = video_info_by_id(@service, 'snippet,contentDetails,statistics', id: tube_id)
+  puts ("This videos's ID is #{tube_info.fetch("id")}. " +
+         "Its title is '#{tube_info.fetch("snippet").fetch("title")}'. ")
+  dur_sec = ISO8601::Duration.new(tube_info.fetch("contentDetails").fetch("duration")).to_seconds
+  views = tube_info.fetch("statistics").fetch("viewCount")
+  if dur_sec > 180 && views.to_i > 10
+    @vids[tube_id] = Hash.new
+    @vids[tube_id]['reach']       = vid['reach']
+    @vids[tube_id]['title']       = vid['title']
+    @vids[tube_id]['youtube_url'] = vid['youtube_url']
+    @vids[tube_id]['view_count']  = tube_info.fetch("statistics").fetch("viewCount")
+    @vids[tube_id]['duration']    = hms(dur_sec)
+  end
 end
 
 # Make api calls for requested number of videos
@@ -180,10 +180,36 @@ def grab_videos(vid_num = 10) # Default is 10 videos total
   return @vids
 end
 
+# Convert seconds to HMS format
+def hms(seconds, decimals = 2)
+  int   = seconds.floor
+  decs  = [decimals, 8].min
+  frac  = seconds - int
+  hms   = [int / 3600, (int / 60) % 60, int % 60].map { |t| t.to_s.rjust(2,'0') }.join(':')
+  if decs > 0
+    fp = (frac == 0) ? '.00' : "#{(frac).round(decs)}"[1..-1]
+    hms  << fp
+  end
+  hms
+end
+
+# Convert seconds to minutes
+def sec_to_min(sec)
+  sec / 60
+end
+
+# Call to Sub returned nil or timed out
 def something_went_wrong
   puts "Something went wrong and the api call failed!"
   puts @vids
   exit 1
+end
+
+# video information by id from YouTube api
+def video_info_by_id(service, part, **params)
+  params = params.delete_if { |p, v| v == ''}
+  response = service.list_videos(part, params).to_json
+  JSON.parse(response).fetch("items")[0]
 end
 
 # Run this to grab a hash of videos and associated data
@@ -191,8 +217,6 @@ end
 # page size to the grab_videos method and instead here ask for number of videos
 # for the html table. We will keep making calls until I have enough videos
 @vids = grab_videos(10) # final number of videos to present in table
-something_went_wrong if @vids['error'] == true
-channels_list_by_username(service, 'snippet,contentDetails,statistics', for_username: 'GoogleDevelopers')
 # Now we want to sort by reach in descending order
 vid_array = @vids.sort_by {|k,v| v['reach']}.reverse
 puts vid_array
