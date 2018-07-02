@@ -17,8 +17,15 @@ describe 'Build html table from api data' do
   describe "grab_videos" do
     it 'hits api and fills hash' do
       @vids = grab_videos(10)
-      title = @vids['xI9gYuL5NR4']['title']
-      expect(title).to eq 'The Church Divide'
+      title = @vids['ZxnNDNQJYEg']['title']
+      expect(title).to eq 'The Reality'
+    end
+  end
+
+  describe "sec_to_min" do
+    it "converts seconds to minutes" do
+      duration = sec_to_min(120)
+      expect(duration).to eql(2)
     end
   end
 end

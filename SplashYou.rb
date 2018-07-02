@@ -6,10 +6,13 @@ require 'google/apis'
 require 'google/apis/youtube_v3'
 require 'googleauth'
 require 'googleauth/stores/file_token_store'
+require 'html/table'
 require 'ISO8601'
 require 'JSON'
 require 'rest-client'
 require 'rubygems'
+
+include HTML
 
 # File with base url and default headers
 @params = JSON.parse(File.read(File.join(File.dirname(__FILE__), "params.json")))
@@ -140,13 +143,13 @@ def check_api_response(got)
   end
 end
 
-# Make call to YouTube api and check duration of vidoes and number of views
+# Make call to YouTube api and check duration and number of views
 def check_video(vid)
   vid['youtube_url'] = vid['youtube_url'][0...43]
   tube_id = vid['youtube_url'][32...43]
   tube_info = video_info_by_id(@service, 'snippet,contentDetails,statistics', id: tube_id)
-  puts ("This videos's ID is #{tube_info.fetch("id")}. " +
-         "Its title is '#{tube_info.fetch("snippet").fetch("title")}'. ")
+  # puts ("This videos's ID is #{tube_info.fetch("id")}. " +
+  #        "Its title is '#{tube_info.fetch("snippet").fetch("title")}'. ")
   dur_sec = ISO8601::Duration.new(tube_info.fetch("contentDetails").fetch("duration")).to_seconds
   views = tube_info.fetch("statistics").fetch("viewCount")
   if dur_sec > 2700 && views.to_i > 100
@@ -164,6 +167,7 @@ def grab_videos(vid_num = 10) # Default is 10 videos total
   batch         = '?page[size]=' + @page_size.to_s
   headers       = @params['headers']
   while @vids.length < vid_num
+    puts 'Grabbing video batch #' + @page_counter.to_s
     page        = '&page[num]=' + @page_counter.to_s
     sub_api_url = @params['base_url'] + batch + page + '&fields=reach,title,youtube_url'
 
@@ -213,7 +217,39 @@ def video_info_by_id(service, part, **params)
 end
 
 # Run this to grab a hash of videos and associated data
-@vids = grab_videos(10) # final number of videos to present in table
-# Now we want to sort by reach in descending order
-vid_array = @vids.sort_by {|k,v| v['reach']}.reverse
-puts vid_array
+@vids = grab_videos(10) # pass final number of videos to present in table
+
+puts 'Sorting video data structure and generating html table...'
+# Sort by reach in descending order
+vids_reach = (@vids.sort_by {|k,v| v['reach']}.reverse).to_h
+
+# Build an html table using the video data we have gathered
+# General table settings
+@table = HTML::Table.new do
+  border   1
+  bgcolor 'green'
+end
+
+# Header row
+@table.push Table::Row.new{ |r|
+  r.align   = "left"
+  r.bgcolor = "yellow"
+  r.content = ["Title","Reach","Duration","Views","Video Url"]
+}
+
+# Iterate over video hash and generate table rows
+vids_reach.each do |key, val|
+  row = Table::Row.new{ |r|
+    r.align   = "left"
+    r.bgcolor = "white"
+    r.content = val['title'], val['reach'], val['duration'], val['view_count'], val['youtube_url']
+  }
+  @table.push(row)
+end
+
+# write the table to vidoes.html file
+File.open('videos.html', 'w') do |f|
+  f.write(@table.html)
+end
+
+puts "Processing is complete."
