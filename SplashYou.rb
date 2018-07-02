@@ -11,13 +11,14 @@ require 'rest-client'
 require 'rubygems'
 
 # File with base url and default headers
-@params      = JSON.parse(File.read(File.join(File.dirname(__FILE__), "params.json")))
+@params = JSON.parse(File.read(File.join(File.dirname(__FILE__), "params.json")))
 
 # Hash of videos and requested information
 @vids = Hash.new
 
-# Initialize page counter
-@counter = 1
+# Initialize page counter and page size
+@page_counter = 1
+@page_size    = 5
 
 # REPLACE WITH URI FOR YOUR CLIENT
 OOB_URI = 'urn:ietf:wg:oauth:2.0:oob'
@@ -158,22 +159,24 @@ def check_video(vid)
   @vids[tube_id]['youtube_url'] = vid['youtube_url']
 end
 
-# Make api call for initial hash of videos
-def grab_videos(vid_num = 10, page_num = 1) # Default is first page of 10 videos
-  batch       = '?page[size]=' + vid_num.to_s
-  page        = '&page[num]=' + page_num.to_s
-  sub_api_url    = @params['base_url'] + batch + page + '&fields=reach,title,youtube_url'
-  headers        = @params['headers']
+# Make api calls for requested number of videos
+def grab_videos(vid_num = 10) # Default is 10 videos total
+  batch         = '?page[size]=' + @page_size.to_s
+  headers       = @params['headers']
+  while @vids.length < vid_num
+    page        = '&page[num]=' + @page_counter.to_s
+    sub_api_url = @params['base_url'] + batch + page + '&fields=reach,title,youtube_url'
 
-  getty = Planetoftheapis.new(headers: headers, meth: 'Get', params: {}, url: sub_api_url).api_call
-  check_api_response(getty)
-  something_went_wrong if @vids['error'] == true
-  getty['response']['_embedded']['media-items'].each do |vid|
-    # skip invalid urls and ignore playlists for now
-    next unless vid['youtube_url'] =~ /\Ahttps:\/\/www.youtube.com\/watch\?v=/
-    check_video(vid)
+    getty = Planetoftheapis.new(headers: headers, meth: 'Get', params: {}, url: sub_api_url).api_call
+    check_api_response(getty)
+    something_went_wrong if @vids['error'] == true
+    getty['response']['_embedded']['media-items'].each do |vid|
+      # skip invalid urls and ignore playlists for now
+      next unless vid['youtube_url'] =~ /\Ahttps:\/\/www.youtube.com\/watch\?v=/
+      check_video(vid)
+    end
+    @page_counter = @page_counter + 1
   end
-  @counter = @counter + 1
   return @vids
 end
 
@@ -184,7 +187,10 @@ def something_went_wrong
 end
 
 # Run this to grab a hash of videos and associated data
-@vids = grab_videos(10, @counter) # max request is 50 even though the doc says 1000
+# The api seems less reliable the more you ask of it so I am going to move the
+# page size to the grab_videos method and instead here ask for number of videos
+# for the html table. We will keep making calls until I have enough videos
+@vids = grab_videos(10) # final number of videos to present in table
 something_went_wrong if @vids['error'] == true
 channels_list_by_username(service, 'snippet,contentDetails,statistics', for_username: 'GoogleDevelopers')
 # Now we want to sort by reach in descending order

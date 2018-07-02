@@ -1,0 +1,65 @@
+AllCops:
+  Exclude:
+    - 'vendor/**/*'
+    - '**/Rakefile'
+    - '**/Berksfile'
+    - 'Vagrantfile**'
+    - 'test/**/**/**/**/**'
+
+Layout/SpaceBeforeFirstArg:
+  Exclude:
+    - '**/Berksfile'
+    - '**/metadata.rb'
+
+Layout/EmptyLines:
+  Exclude:
+    - '**/Guardfile'
+    - '**/Rakefile'
+
+Layout/TrailingBlankLines:
+  Exclude:
+    - '**/Guardfile'
+    - '**/Rakefile'
+
+Metrics/AbcSize:
+  Exclude:
+    - 'libraries/*.rb'
+    - 'providers/*.rb'
+
+Metrics/BlockLength:
+  Exclude:
+    - 'libraries/*.rb'
+    - 'providers/*.rb'
+
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - 'libraries/*.rb'
+    - 'providers/*.rb'
+
+Metrics/LineLength:
+  Exclude:
+    - '**/Gemfile'
+    - 'libraries/*.rb'
+    - 'providers/*.rb'
+    - 'spec/**/**'
+    - 'recipes/antivirus.rb'
+  Max: 150
+
+Metrics/MethodLength:
+  Exclude:
+    - 'libraries/*.rb'
+    - 'providers/*.rb'
+
+Metrics/PerceivedComplexity:
+  Exclude:
+    - 'libraries/*.rb'
+    - 'providers/*.rb'
+
+Naming/FileName:
+  Exclude:
+    - '**/Gemfile'
+    - '**/Berksfile'
+
+Style/RegexpLiteral:
+  Exclude:
+    - '**/Guardfile'
