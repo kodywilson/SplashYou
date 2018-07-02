@@ -149,7 +149,7 @@ def check_video(vid)
          "Its title is '#{tube_info.fetch("snippet").fetch("title")}'. ")
   dur_sec = ISO8601::Duration.new(tube_info.fetch("contentDetails").fetch("duration")).to_seconds
   views = tube_info.fetch("statistics").fetch("viewCount")
-  if dur_sec > 180 && views.to_i > 10
+  if dur_sec > 2700 && views.to_i > 100
     @vids[tube_id] = Hash.new
     @vids[tube_id]['reach']       = vid['reach']
     @vids[tube_id]['title']       = vid['title']
@@ -213,9 +213,6 @@ def video_info_by_id(service, part, **params)
 end
 
 # Run this to grab a hash of videos and associated data
-# The api seems less reliable the more you ask of it so I am going to move the
-# page size to the grab_videos method and instead here ask for number of videos
-# for the html table. We will keep making calls until I have enough videos
 @vids = grab_videos(10) # final number of videos to present in table
 # Now we want to sort by reach in descending order
 vid_array = @vids.sort_by {|k,v| v['reach']}.reverse
