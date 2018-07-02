@@ -6,10 +6,13 @@ require 'google/apis'
 require 'google/apis/youtube_v3'
 require 'googleauth'
 require 'googleauth/stores/file_token_store'
+require 'html/table'
 require 'ISO8601'
 require 'JSON'
 require 'rest-client'
 require 'rubygems'
+
+include HTML
 
 # File with base url and default headers
 @params = JSON.parse(File.read(File.join(File.dirname(__FILE__), "params.json")))
@@ -215,5 +218,34 @@ end
 # Run this to grab a hash of videos and associated data
 @vids = grab_videos(10) # final number of videos to present in table
 # Now we want to sort by reach in descending order
-vid_array = @vids.sort_by {|k,v| v['reach']}.reverse
-puts vid_array
+vids_reach = (@vids.sort_by {|k,v| v['reach']}.reverse).to_h
+#puts vid_array
+
+# Now we build an html table using the video data we have gathered
+# General table settings
+@table = HTML::Table.new do
+  border   1
+  bgcolor 'green'
+end
+
+# Header row
+@table.push Table::Row.new{ |r|
+  r.align   = "left"
+  r.bgcolor = "yellow"
+  r.content = ["Title","Reach","Duration","Views","Video Url"]
+}
+
+# Iterate over video hash and generate table rows
+vids_reach.each do |key, val|
+  row = Table::Row.new{ |r|
+    r.align   = "left"
+    r.bgcolor = "white"
+    r.content = val['title'], val['reach'], val['duration'], val['view_count'], val['youtube_url']
+  }
+  @table.push(row)
+end
+
+# write the table to vidoes.html file
+File.open('videos.html', 'w') do |f|
+  f.write(@table.html)
+end
